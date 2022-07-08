@@ -37,40 +37,45 @@ R_GAZE_Y = params.r_gaze_y_edit;
 SCREEN_X = str2double(params.screenWidth_edit);
 SCREEN_Y = str2double(params.screenHeight_edit);
 
-%% find first and last trigger, if not provided
-
-if isempty(params.startTrigger_edit) & isempty(params.endTrigger_edit)
-    startTrigger = str2double(EEG.event(1).type);
-    endTrigger = str2double(EEG.event(end).type);
-else
-    startTrigger = str2double(params.startTrigger_edit);
-    endTrigger = str2double(params.endTrigger_edit);
+%% add ET data to the EEG structure
+% only if itis not already part of and synchronized to the structure:
+mergeEtFileToEEG = false;
+if mergeEtFileToEEG
+    %% find first and last trigger, if not provided
+    
+    if isempty(params.startTrigger_edit) & isempty(params.endTrigger_edit)
+        startTrigger = str2double(EEG.event(1).type);
+        endTrigger = str2double(EEG.event(end).type);
+    else
+        startTrigger = str2double(params.startTrigger_edit);
+        endTrigger = str2double(params.endTrigger_edit);
+    end
+    
+    %% find corresponding et file - tricky, if more ET files in a folder
+    d = dir(fullfile(dataFolder, ['*' , et_namePattern]));
+    
+    if length(d) == 1
+        et_fileName = d(1).name;   
+    else % assume that that the filenames for EEG and ET are identical up to _EEG.mat 
+        i = regexp(eeg_fileName, 'EEG');
+        patt = eeg_fileName(1:i-2); % remove _EEG from the name
+        et_fileName = [patt, '_ET.', et_fileExt];
+    end
+    
+    
+    %% if .txt, convert to .mat and save as a mat file
+    if strcmp(et_fileExt, 'txt')
+        ET = parsesmi(fullfile(dataFolder, et_fileName), dataFolder);
+    elseif strcmp(et_fileExt, 'mat')
+        ET = load(fullfile(dataFolder, et_fileName));
+    end
+    
+    %% import & synchronize ET data
+    EEG = pop_importeyetracker(EEG, fullfile(dataFolder, et_fileName), ...
+        [startTrigger, endTrigger], 1:length( ET.colheader), ET.colheader, 1,1,1,0);
+            
 end
 
-%% find corresponding et file - tricky, if more ET files in a folder
-d = dir(fullfile(dataFolder, ['*' , et_namePattern]));
-
-if length(d) == 1
-    et_fileName = d(1).name;   
-else % assume that that the filenames for EEG and ET are identical up to _EEG.mat 
-    i = regexp(eeg_fileName, 'EEG');
-    patt = eeg_fileName(1:i-2); % remove _EEG from the name
-    et_fileName = [patt, '_ET.', et_fileExt];
-end
-
-
-%% if .txt, convert to .mat and save as a mat file
-if strcmp(et_fileExt, 'txt')
-    ET = parsesmi(fullfile(dataFolder, et_fileName), dataFolder);
-elseif strcmp(et_fileExt, 'mat')
-    ET = load(fullfile(dataFolder, et_fileName));
-end
-
-%% import & synchronize ET data
-EEG = pop_importeyetracker(EEG, fullfile(dataFolder, et_fileName), ...
-    [startTrigger, endTrigger], 1:length( ET.colheader), ET.colheader, 1,1,1,0);
-        
-        
 %% Mark intervals with bad eye tracking data
 % important, so these intervals will not influence our saccade detection
 % This function is also useful to objectively reject intervals during
