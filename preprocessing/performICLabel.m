@@ -96,6 +96,7 @@ EEG.etc.keep_comps = ~isempty(EEG.etc.keep_comps);
 
 %% Perform ICA
 display(CSTS.RUN_MESSAGE);
+high = []; % only for debug!
 if( ~isempty(high) ) % temporary high-pass filter
     EEG_orig = EEG;
     [~, EEG, ~, b] = evalc('pop_eegfiltnew(EEG, high.freq, 0, high.order)');
@@ -119,6 +120,11 @@ try
         EEG.nbchan = EEG_orig.nbchan;
         EEG.chanlocs = EEG_orig.chanlocs;
         EEG_orig.automagic.iclabel.ETguidedICA.performed = 'yes';
+        % save ET for later reattachment
+        ET = EEG;
+        ET.data = ET.data(size(EEG_orig.data, 1)+1:end, :); % keep only ET data
+        ET.nbchan = ET.nbchan - EEG.nbchan;
+        ET.chanlocs = ET.chanlocs();
     end
 catch ME
     ME.message

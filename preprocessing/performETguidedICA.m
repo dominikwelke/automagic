@@ -67,10 +67,22 @@ elseif strcmp(et_fileExt, 'mat')
 end
 
 %% import & synchronize ET data
+importEyeEvents = false;
+plotFig = false;
+importColumns = 2:length(ET.colheader);
+newLabels = ET.colheader(2:end);
+startTrigger = 1;
+endTrigger = 56;
 EEG = pop_importeyetracker(EEG, fullfile(dataFolder, et_fileName), ...
-    [startTrigger, endTrigger], 1:length( ET.colheader), ET.colheader, 1,1,1,0);
-        
-        
+    [startTrigger, endTrigger], importColumns, newLabels, importEyeEvents,1,0,plotFig,4);
+
+% save the figure
+if plotFig
+    fname = [et_datafolder et_fileName(1:end-4) '_sync.fig'];
+    savefig(gcf,fname)
+    close gcf
+end
+
 %% Mark intervals with bad eye tracking data
 % important, so these intervals will not influence our saccade detection
 % This function is also useful to objectively reject intervals during
