@@ -94,24 +94,26 @@ REJECTMODE = 2; % don't reject data, add extra "bad_ET" events to EEG.event
 if any(strcmp({EEG.chanlocs(:).labels},L_GAZE_X)) & ~any(strcmp({EEG.chanlocs(:).labels}, R_GAZE_X))
     LX = find(strcmp({EEG.chanlocs(:).labels}, L_GAZE_X));
     LY = find(strcmp({EEG.chanlocs(:).labels}, L_GAZE_Y));
-    
-    EEG = pop_rej_eyecontin(EEG, [LX LY], [1 1], [SCREEN_X SCREEN_Y], 25, REJECTMODE);
-    
+    rej_chans = [LX LY];
+    rej_minvals = [1 1];
+    rej_maxvals = [SCREEN_X SCREEN_Y];
 elseif any(strcmp({EEG.chanlocs(:).labels}, R_GAZE_X)) & ~any(strcmp({EEG.chanlocs(:).labels}, L_GAZE_X))
     RX = find(strcmp({EEG.chanlocs(:).labels}, R_GAZE_X));
     RY = find(strcmp({EEG.chanlocs(:).labels}, R_GAZE_Y));
-    
-    EEG = pop_rej_eyecontin(EEG, [RX RY], [1 1], [SCREEN_X SCREEN_Y], 25, REJECTMODE);
-    
+    rej_chans = [RX RY];
+    rej_minvals = [1 1];
+    rej_maxvals = [SCREEN_X SCREEN_Y];
 elseif any(strcmp({EEG.chanlocs(:).labels}, L_GAZE_X)) & any(strcmp({EEG.chanlocs(:).labels}, R_GAZE_X))
     LX = find(strcmp({EEG.chanlocs(:).labels}, L_GAZE_X));
     LY = find(strcmp({EEG.chanlocs(:).labels}, L_GAZE_Y));
     RX = find(strcmp({EEG.chanlocs(:).labels}, R_GAZE_X));
     RY = find(strcmp({EEG.chanlocs(:).labels}, R_GAZE_Y));
-    
-    EEG = pop_rej_eyecontin(EEG, [LX LY RX RY], [1 1 1 1], [SCREEN_X SCREEN_Y SCREEN_X SCREEN_Y], 25, REJECTMODE);
+    rej_chans = [LX LY RX RY];
+    rej_minvals = [1 1 1 1];
+    rej_maxvals = [SCREEN_X SCREEN_Y SCREEN_X SCREEN_Y];
 end
 
+EEG = pop_rej_eyecontin(EEG, rej_chans, rej_minvals, rej_maxvals, 25, REJECTMODE);
 
 %% Detect (micro)saccades & fixations (Engbert & Kliegl, 2003)
 
