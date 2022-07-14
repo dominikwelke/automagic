@@ -96,7 +96,6 @@ EEG.etc.keep_comps = ~isempty(EEG.etc.keep_comps);
 
 %% Perform ICA
 display(CSTS.RUN_MESSAGE);
-high = []; % only for debug!
 if( ~isempty(high) ) % temporary high-pass filter
     EEG_orig = EEG;
     [~, EEG, ~, b] = evalc('pop_eegfiltnew(EEG, high.freq, 0, high.order)');
@@ -264,11 +263,3 @@ EEG_orig.icawinv = EEG.icawinv; % computed in pop_subcomp
 EEG_orig = eeg_checkset(EEG_orig); % let EEGLAB re-compute EEG.icaact 
 EEG_orig.data = EEG.data; 
 EEG = EEG_orig;
-    
-
-
-
-
-
-
-
