@@ -79,10 +79,14 @@ d = dir(fullfile(dataFolder, ['*' , et_namePattern]));
 
 if length(d) == 1
     et_fileName = d(1).name;   
-else % assume that that the filenames for EEG and ET are identical up to _EEG.mat 
-    i = regexp(eeg_fileName, 'EEG');
-    patt = eeg_fileName(1:i-2); % remove _EEG from the name
-    et_fileName = [patt, '_ET.', et_fileExt];
+else % assume that that the filenames for EEG and ET are identical up to "_eeg/_EEG" vs et_namePattern
+    i = regexp(lower(eeg_fileName), '_eeg');
+    patt = eeg_fileName(1:i); % remove "eeg" from the name
+    if strcmp(et_namePattern(1), '_')
+        et_fileName = [patt(1:end-1), et_namePattern];
+    else
+        et_fileName = [patt, et_namePattern];
+    end
 end
 
 
