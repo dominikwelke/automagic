@@ -1,4 +1,4 @@
-function [EEG] = performETguidedICA(EEG, params)
+function [EEG, ET] = performETguidedICA(EEG, params)
 
 % For details see the underlying publication: Dimigen, 2020, NeuroImage
 
@@ -162,7 +162,12 @@ if ETparams.detection.PLOTFIG
     close gcf
 end
 
-%% Create optimized data for ICA training (OPTICAT, Dimigen, 2018)
+%% keep ET data for reattaching it at the end of the preprocessing stream
+nbchan = length(ETparams.sync.importColumns);
+ET = EEG;
+ET.data = ET.data(end-nbchan+1:end, :); % keep only ET data
+ET.nbchan = nbchan;
+ET.chanlocs = ET.chanlocs(end-nbchan+1:end);
 
 %% Create optimized data for ICA training (OPTICAT, Dimigen, 2018)
 
