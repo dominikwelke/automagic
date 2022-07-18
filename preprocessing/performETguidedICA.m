@@ -31,14 +31,37 @@ et_datafolder = params.datafolder_edit;
 % dataFolder = EEG.dataFolder;
 dataFolder = et_datafolder;
 
-ETparams = struct;
 L_GAZE_X = params.l_gaze_x_edit;
 L_GAZE_Y = params.l_gaze_y_edit;
 R_GAZE_X = params.r_gaze_x_edit;
 R_GAZE_Y = params.r_gaze_y_edit;
 
-ETparams.setup.SCREEN_RES_X = str2double(params.screenWidth_edit);
-ETparams.setup.SCREEN_RES_Y = str2double(params.screenHeight_edit);
+
+% build a structure (can migrate to defaults later?)
+ETparams = struct;
+% ET setup
+ETparams.setup.SCREEN_RES_X       = str2double(params.screenWidth_edit);  % in px
+ETparams.setup.SCREEN_RES_Y       = str2double(params.screenHeight_edit); % in px
+ETparams.setup.VIEW_DIST          = 720;   % in mm
+ETparams.setup.SCREEN_WIDTH       = 530;   % in mm
+ETparams.setup.DEG_PER_PIXEL      = px2deg(ETparams.setup.SCREEN_WIDTH,ETparams.setup.SCREEN_RES_X,ETparams.setup.VIEW_DIST); % calculate transfer from screen px to deg vis. angle
+% syncronization
+ETparams.sync.importEyeEvents     = false; % dont import them, recompute saccades
+ETparams.sync.PLOTFIG             = 0;     % plot and save the sync figure
+% ET based data rejection
+ETparams.markbad.REJECTMODE       = 2;     % don't reject data, add extra "bad_ET" events to EEG.event
+% saccade detection
+ETparams.detection.THRESH         = 6;     % eye velocity threshold (in median-based SDs)
+ETparams.detection.MINDUR         = 4;     % minimum saccade duration (samples)
+ETparams.detection.SMOOTH         = 1;     % smooth eye velocities? (recommended if SR > 250 Hz)
+ETparams.detection.PLOTFIG        = 1;     % plot and save the saccade detection figure
+ETparams.detection.WRITESAC       = 1;     % add saccades as events to EEG.event?
+ETparams.detection.WRITEFIX       = 1;     % add fixations as events to EEG.event?
+% OPTICAT proper
+ETparams.OPTICAT.OW_PROPORTION    = 1.0;   % overweighting proportion
+ETparams.OPTICAT.SACCADE_WINDOW   = [str2double(params.from_edit) str2double(params.to_edit)];  % time window to overweight (-20 to 10 ms is default)
+ETparams.OPTICAT.REMOVE_EPOCHMEAN = true;  % subtract mean from overweighted epochs? (recommended)
+
 
 %% find first and last trigger, if not provided
 
@@ -49,6 +72,7 @@ else
     ETparams.sync.startTrigger = str2double(params.startTrigger_edit);
     ETparams.sync.endTrigger = str2double(params.endTrigger_edit);
 end
+%ETparams.sync.endTrigger          = 56;    % overwriting it here
 
 %% find corresponding et file - tricky, if more ET files in a folder
 d = dir(fullfile(dataFolder, ['*' , et_namePattern]));
@@ -70,13 +94,8 @@ elseif strcmp(et_fileExt, 'mat')
 end
 
 %% import & synchronize ET data
-ETparams.sync.importEyeEvents = false;
-ETparams.sync.PLOTFIG = true;
-ETparams.sync.importColumns = 2:length(ET.colheader);
+ETparams.sync.importColumns = 2:length(ET.colheader); % exclude time trace
 ETparams.sync.newLabels = ET.colheader(2:end);
-
-ETparams.sync.startTrigger = 1; % overwriting it here
-ETparams.sync.endTrigger = 56; % overwriting it here
 
 EEG = pop_importeyetracker(EEG, fullfile(dataFolder, et_fileName), ...
     [ETparams.sync.startTrigger, ETparams.sync.endTrigger], ETparams.sync.importColumns, ETparams.sync.newLabels, ETparams.sync.importEyeEvents,1,0,ETparams.sync.PLOTFIG,4);
@@ -92,8 +111,6 @@ end
 % important, so these intervals will not influence our saccade detection
 % This function is also useful to objectively reject intervals during
 % which the participant blinked or did not look at the stimulus
-
-ETparams.markbad.REJECTMODE = 2; % don't reject data, add extra "bad_ET" events to EEG.event
 
 % eye position channels
 ETrecmode = [];
@@ -136,25 +153,6 @@ EEG = pop_rej_eyecontin(EEG, ETparams.markbad.rej_chans, ETparams.markbad.rej_mi
 % % see "help pop_detecteyemovements" to see all options
 % % 
 
-% calculate angle
-ETparams.setup.VIEW_DIST = 720; % in mm
-ETparams.setup.SCREEN_WIDTH = 530; % in mm
-%hor_res = ETparams.setup.SCREEN_RES_X; % in px
-mm_per_pix    = ETparams.setup.SCREEN_WIDTH/ETparams.setup.SCREEN_RES_X;
-alpha_per_pix = 180/pi*(2*atan(mm_per_pix/ETparams.setup.VIEW_DIST/2));
-
-% set parameter
-ETparams.setup.DEG_PER_PIXEL = alpha_per_pix; % 1 pixel on screen was 0.036 degrees of visual angle
-ETparams.detection.THRESH        = 6;     % eye velocity threshold (in median-based SDs)
-ETparams.detection.MINDUR        = 4;     % minimum saccade duration (samples)
-ETparams.detection.SMOOTH        = 1;     % smooth eye velocities? (recommended if SR > 250 Hz)
-
-ETparams.detection.PLOTFIG       = 1;
-ETparams.detection.WRITESAC      = 1;     % add saccades as events to EEG.event?
-ETparams.detection.WRITEFIX      = 1;     % add fixations as events to EEG.event?
-% % 
-
-
 EEG = pop_detecteyemovements(EEG,left_eye_xy,right_eye_xy,ETparams.detection.THRESH,ETparams.detection.MINDUR,ETparams.setup.DEG_PER_PIXEL,ETparams.detection.SMOOTH,0,25,2,ETparams.detection.PLOTFIG,ETparams.detection.WRITESAC,ETparams.detection.WRITEFIX);
 
 % save the figure
@@ -166,9 +164,7 @@ end
 
 %% Create optimized data for ICA training (OPTICAT, Dimigen, 2018)
 
-OW_PROPORTION    = 1.0;          % overweighting proportion
-SACCADE_WINDOW   = [str2double(params.from_edit) str2double(params.to_edit)];  % time window to overweight (-20 to 10 ms is default)
-REMOVE_EPOCHMEAN = true;         % subtract mean from overweighted epochs? (recommended)
+%% Create optimized data for ICA training (OPTICAT, Dimigen, 2018)
 
 % find name of saccade event 
 i = find(~cellfun(@isempty, regexp({EEG.event(:).type}, 'sac')));
@@ -182,10 +178,16 @@ for idx = i
     EEG.event(idx).type = 'fixation';
 end
 
-
 % Overweight saccade intervals (containing spike potential)
-EEG = pop_overweightevents(EEG,'saccade',SACCADE_WINDOW,OW_PROPORTION,REMOVE_EPOCHMEAN);
+EEG = pop_overweightevents(EEG,'saccade',ETparams.OPTICAT.SACCADE_WINDOW,ETparams.OPTICAT.OW_PROPORTION,ETparams.OPTICAT.REMOVE_EPOCHMEAN);
 
 % Run ICA on optimized training data
 fprintf('\nTraining ICA on the optimized data ...')
 
+
+%% nested function for transformation of screen px to deg
+function alpha_per_pix = px2deg(SCREEN_WIDTH_MM, SCREEN_RES_X, VIEW_DIST_MM)
+    mm_per_pix    = SCREEN_WIDTH_MM/SCREEN_RES_X;
+    alpha_per_pix = 180/pi*(2*atan(mm_per_pix/VIEW_DIST_MM/2));
+end
+end
