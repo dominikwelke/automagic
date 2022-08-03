@@ -1208,12 +1208,19 @@ classdef Project < handle
                 BIDS_desc = block.prefix; 
                 
                 % final filenames for result files
-                newResFile = [newResSubAdd BIDS_fnameRoot '_desc-' BIDS_desc '_eeg'];
-                newResJSONFile = [newResSubAdd BIDS_fnameRoot '_desc-' BIDS_desc '_eeg.json'];
-                newReslogFile = [newResSubAdd BIDS_fnameRoot '_desc-' BIDS_desc '_log.txt'];
+                newResFile = [newResSubAdd BIDS_fnameRoot '_eeg']; % '_desc-' BIDS_desc '_eeg'];
+                newResJSONFile = [newResSubAdd BIDS_fnameRoot '_eeg.json']; % '_desc-' BIDS_desc '_eeg.json'];
+                newReslogFile = [newResSubAdd BIDS_fnameRoot '_log.txt']; % '_desc-' BIDS_desc '_log.txt'];
+%                 newResPhotoFiles = {
+%                     [newResSubAdd BIDS_fnameRoot '_desc-quality_photo_source.jpg']
+%                     [newResSubAdd BIDS_fnameRoot '_desc-quality_photo.jpg'] % '_desc-' BIDS_desc '_photo.jpg']
+%                     };
                 newResPhotoFiles = {
-                    [newResSubAdd BIDS_fnameRoot '_desc-source_photo.jpg'], [newResSubAdd BIDS_fnameRoot '_desc-' BIDS_desc '_photo.jpg']
+                    [code_fol BIDS_fnameRoot '_desc-quality_photo_source.jpg']
+                    [code_fol BIDS_fnameRoot '_desc-quality_photo.jpg'] % '_desc-' BIDS_desc '_photo.jpg']
                     };
+
+                newResEventFile = [newResSubAdd BIDS_fnameRoot '_events.tsv'];
 
                 newRawFile = [newRawSubAdd BIDS_fnameRoot '_eeg']; %#ok<NASGU>
                 newRawJSONFile = [newRawSubAdd BIDS_fnameRoot '_eeg.json'];
@@ -1480,7 +1487,16 @@ classdef Project < handle
                     end
                     
                 end
-                
+
+                % generate events.tsv
+                BIDS_updateEvents = true;
+                if BIDS_updateEvents
+                    export_bids_events(EEG, newResEventFile); % events.tsv
+                    % events.json tbd
+                    % kick out _events.* files from copy list
+                    BIDS_recommendedFiles = BIDS_recommendedFiles(~strcmp(BIDS_recommendedFiles, '*_events.*'));
+                end
+
                 % try copying recommended BIDS files (inheritance prinicple)
                 BIDS_folderSource = fileparts(block.sourceAddress);
                 BIDS_filesSource = {dir(BIDS_folderSource) dir(fileparts(BIDS_folderSource))};
